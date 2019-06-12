@@ -18,6 +18,7 @@ object RoyalRoadApi : FictionHostApi, CoroutineScope by CoroutineScope(Dispatche
     private val service: RoyalRoadService
 
     init {
+        // TODO("clean debug") // Change or remove the Http logger
         val logging = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
         val httpClient = OkHttpClient.Builder().apply {
             addInterceptor(logging)
