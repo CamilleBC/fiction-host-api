@@ -10,5 +10,5 @@ data class Fiction(
     val authorUrl: String?,
     val description: String = "No description available.",
     val imageUrl: String?,
-    val chapters: List<File>
+    val chapters: List<Chapter>
 ) {}

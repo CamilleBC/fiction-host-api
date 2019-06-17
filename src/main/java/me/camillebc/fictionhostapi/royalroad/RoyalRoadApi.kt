@@ -34,16 +34,16 @@ object RoyalRoadApi : FictionHostApi, CoroutineScope by CoroutineScope(Dispatche
         service = retrofit.create(RoyalRoadService::class.java)
     }
 
-    override suspend fun getChapter(id: String): File {
+    override suspend fun getChapter(fictionId: String, chapterId: String): File {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override suspend fun getChapterRange(start: String, end: String): List<File> {
+    override suspend fun getChapterRange(fictionId: String, startChapterId: String, endChapterId: String): List<File> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override suspend fun getFiction(id: String, download: Boolean): Fiction {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override suspend fun getFiction(fictionId: String, download: Boolean = false): Fiction {
+        val response = service.getFiction(fictionId)
     }
 
     override suspend fun getTags(): List<String> {
