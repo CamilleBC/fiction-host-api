@@ -8,8 +8,8 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 internal interface RoyalRoadService {
-    @GET("fiction/{fictionId}/chapter/{chapterId}")
-    suspend fun getChapter(@Path("fictionId") fictionId: String, @Path("chapterId") chapterId: String): Response<ResponseBody>
+    @GET("{chapterId}")
+    suspend fun getChapter(@Path("chapterId") chapterId: String): Response<ResponseBody>
 
     @GET("fiction/{fictionId}")
     suspend fun getFiction(@Path("fictionId") fictionId: String): Response<ResponseBody>
@@ -19,9 +19,9 @@ internal interface RoyalRoadService {
 
     @GET("fictions/search")
     suspend fun search(
-        @Query("keyword") keyword: String,
-        @Query("name") title: String?,
-        @Query("author") author: String?,
-        @Query("tagsAdd") tags: Array<String>?
-    ): Response<Body>
+        @Query("keyword") keyword: String? = null,
+        @Query("name") title: String? = null,
+        @Query("author") author: String? = null,
+        @Query("tagsAdd") tags: List<String>? = null
+    ): Response<ResponseBody>
 }

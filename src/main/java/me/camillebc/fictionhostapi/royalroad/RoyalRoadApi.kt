@@ -9,8 +9,6 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.jsoup.Jsoup
 import retrofit2.Retrofit
-import java.io.File
-import java.lang.Exception
 import java.util.concurrent.TimeUnit
 
 
@@ -19,9 +17,10 @@ private const val HOST = "royalroad"
 // JSOUP CSS QUERIES
 // CHAPTER QUERIES
 private const val CHAPTERS_QUERY = "tr[style=cursor: pointer]"
-
+private const val CHAPTER_CONTENT_QUERY = "*.chapter-content"
+private const val CHAPTER_TITLE_QUERY = "*.fic-header > div > div.text-center > h1"
 // COVER IMAGE
-private const val COVER_IMAGE_QUERY = "img[id~=cover]"
+private const val COVER_IMAGE_QUERY = "img[id*=cover]"
 // FAVOURITE QUERIES
 private const val FAVOURITE_ITEM_QUERY = "div.fiction-list-item"             // parent element
 private const val FAVOURITE_AUTHOR_QUERY = "div.fiction-info > span.author"
@@ -68,11 +67,25 @@ object RoyalRoadApi : FictionHostApi, CoroutineScope by CoroutineScope(Dispatche
         service = retrofit.create(RoyalRoadService::class.java)
     }
 
-    override suspend fun getChapter(fictionId: String, chapterId: String): File {
+    override suspend fun getAllChapters(fiction: Fiction) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override suspend fun getChapterRange(fictionId: String, startChapterId: String, endChapterId: String): List<File> {
+    override suspend fun getChapter(chapter: Chapter) {
+        val response = service.getChapter(chapter.id)
+        if (response.isSuccessful) {
+            val doc = Jsoup.parse(response.body()?.string())
+            chapter.title = doc.select(CHAPTER_TITLE_QUERY).text()
+            chapter.content = doc.select(CHAPTER_CONTENT_QUERY).html().lines()
+            println("Request chapter html:\n${doc.select(CHAPTER_CONTENT_QUERY).html()}")
+        } else throw Exception("Could not get chapter: ${chapter.id}")
+    }
+
+    override suspend fun getChapterRange(
+        fiction: Fiction,
+        startChapter: Chapter,
+        endChapter: Chapter
+    ) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
@@ -83,30 +96,34 @@ object RoyalRoadApi : FictionHostApi, CoroutineScope by CoroutineScope(Dispatche
         if (response.isSuccessful) {
             val doc = Jsoup.parse(response.body()?.string())
             val name = doc.select(FICTION_NAME_QUERY).text()
-            val author= doc.select(FICTION_AUTHOR_QUERY).text()
+            val author = doc.select(FICTION_AUTHOR_QUERY).text()
             val authorUrl = doc.select(FICTION_AUTHOR_URL_QUERY).attr("href")
             val description = StringBuilder().also {
-                doc.select(FICTION_DESCRIPTION_QUERY).forEach { p -> it.appendln(p.text())
+                doc.select(FICTION_DESCRIPTION_QUERY).forEach { p ->
+                    it.appendln(p.text())
                 }
             }.toString()
             val imageUrl = doc.select(COVER_IMAGE_QUERY).first().absUrl("src")
+            val tags = mutableListOf<String>().apply {
+                doc.select(FICTION_TAGS_QUERY).forEach { add(it.text()) }
+            }
             val chapters = mutableListOf<Chapter>().apply {
                 doc.select(CHAPTERS_QUERY).forEach { chapterUrl ->
                     add(Chapter(chapterUrl.attr("data-url")))
                 }
             }
-                fiction = Fiction(
-                    name = name,
-                    host = HOST,
-                    hostUrl = BASE_URL + fictionId,
-                    author = author,
-                    authorUrl = authorUrl,
-                    description = description,
-                    imageUrl = imageUrl,
-                    chapters = chapters
-                )
-            }
-        else throw Exception("Could not get fiction: $fictionId")
+            fiction = Fiction(
+                name = name,
+                hostUrl = BASE_URL,
+                fictionId = fictionId,
+                author = author,
+                authorUrl = authorUrl,
+                description = description,
+                imageUrl = imageUrl,
+                tags = tags,
+                chapters = chapters
+            )
+        } else throw Exception("Could not get fiction: $fictionId")
         return fiction
     }
 
@@ -123,8 +140,19 @@ object RoyalRoadApi : FictionHostApi, CoroutineScope by CoroutineScope(Dispatche
         return tagList
     }
 
-    override suspend fun search(): List<Fiction> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override suspend fun search(query: String?, name: String?, author: String?, tags: List<String>?): List<Fiction> {
+        val response = service.search(query, name, author, tags)
+        val fictionList = mutableListOf<Fiction>()
+
+        if (response.isSuccessful) {
+            val doc = Jsoup.parse(response.body()?.string())
+            val item = doc.select(SEARCH_ITEM_QUERY)
+            item.forEach { element ->
+                val fictionId = element.select(SEARCH_URL_QUERY).attr("href")
+                fictionList.add(getFiction(fictionId))
+            }
+        } else throw Exception("Could not execute the search on RoyalRoad.")
+        return fictionList
     }
 
 }

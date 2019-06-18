@@ -1,9 +1,7 @@
 package me.camillebc.fictionhostapi
 
-import java.io.File
-
 data class Chapter(
     val id: String,
-    var file: File? = null
-) {
-}
+    var title: String? = null,
+    var content: List<String>? = null
+)
