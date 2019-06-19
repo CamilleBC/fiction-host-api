@@ -52,9 +52,9 @@ object RoyalRoadApi : FictionHostApi, CoroutineScope by CoroutineScope(Dispatche
 
     init {
         // TODO("clean debug") // Change or remove the Http logger
-        val logging = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
+//        val logging = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
         val httpClient = OkHttpClient.Builder().apply {
-            addInterceptor(logging)
+//            addInterceptor(logging)
             readTimeout(30, TimeUnit.SECONDS)
             followRedirects(true)
             followSslRedirects(true)
@@ -68,7 +68,7 @@ object RoyalRoadApi : FictionHostApi, CoroutineScope by CoroutineScope(Dispatche
     }
 
     override suspend fun getAllChapters(fiction: Fiction) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        fiction.chapters.forEach { getChapter(it) }
     }
 
     override suspend fun getChapter(chapter: Chapter) {
@@ -77,16 +77,15 @@ object RoyalRoadApi : FictionHostApi, CoroutineScope by CoroutineScope(Dispatche
             val doc = Jsoup.parse(response.body()?.string())
             chapter.title = doc.select(CHAPTER_TITLE_QUERY).text()
             chapter.content = doc.select(CHAPTER_CONTENT_QUERY).html().lines()
-            println("Request chapter html:\n${doc.select(CHAPTER_CONTENT_QUERY).html()}")
         } else throw Exception("Could not get chapter: ${chapter.id}")
     }
 
     override suspend fun getChapterRange(
         fiction: Fiction,
-        startChapter: Chapter,
-        endChapter: Chapter
+        start: Int,
+        end: Int
     ) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        fiction.chapters.subList(start, end).forEach { getChapter(it) }
     }
 
     override suspend fun getFiction(fictionId: String): Fiction {
