@@ -11,7 +11,7 @@ internal interface RoyalRoadService {
     @GET("{chapterId}")
     suspend fun getChapter(@Path("chapterId") chapterId: String): Response<ResponseBody>
 
-    @GET("fiction/{fictionId}")
+    @GET("{fictionId}")
     suspend fun getFiction(@Path("fictionId") fictionId: String): Response<ResponseBody>
 
     @GET("fictions/search?advanced=True")
