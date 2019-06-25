@@ -2,11 +2,13 @@ package me.camillebc.fictionhostapi.royalroad
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.channels.produce
 import me.camillebc.fictionhostapi.Chapter
 import me.camillebc.fictionhostapi.Fiction
 import me.camillebc.fictionhostapi.FictionHostApi
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import org.jsoup.Jsoup
 import retrofit2.Retrofit
 import java.util.concurrent.TimeUnit
@@ -35,15 +37,13 @@ private const val SEARCH_DESCRIPTION_QUERY = "div.fiction-description"
 private const val SEARCH_NAME_QUERY = "h2"
 private const val SEARCH_NO_RESULT_QUERY = "h4"
 private const val SEARCH_URL_QUERY = "$SEARCH_NAME_QUERY > a"
+private const val SEARCH_LAST_PAGE_QUERY = "ul.pagination > li > a:contains(Last)"
 // FICTION QUERIES
 private const val FICTION_AUTHOR_QUERY = "h4[property=\"author\"] > span[property=\"name\"]"
 private const val FICTION_AUTHOR_URL_QUERY = "$FICTION_AUTHOR_QUERY > a"
 private const val FICTION_DESCRIPTION_QUERY = "div[property=\"description\"]"
 private const val FICTION_NAME_QUERY = "h1[property=\"name\"]"
 private const val FICTION_TAGS_QUERY = "span.tags > span.label"                      // parent element
-// ID INDEXES
-private const val FICTION_ID_INDEX = 2
-private const val AUTHOR_ID_INDEX = 2
 // TAG QUERIES
 private const val TAG_ATTRIBUTE = "data-tag"
 
@@ -51,10 +51,9 @@ object RoyalRoadApi : FictionHostApi, CoroutineScope by CoroutineScope(Dispatche
     private val service: RoyalRoadService
 
     init {
-        // TODO("clean debug") // Change or remove the Http logger
 //        val logging = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
         val httpClient = OkHttpClient.Builder().apply {
-//            addInterceptor(logging)
+            //            addInterceptor(logging)
             readTimeout(30, TimeUnit.SECONDS)
             followRedirects(true)
             followSslRedirects(true)
@@ -139,19 +138,52 @@ object RoyalRoadApi : FictionHostApi, CoroutineScope by CoroutineScope(Dispatche
         return tagList
     }
 
-    override suspend fun search(query: String?, name: String?, author: String?, tags: List<String>?): List<Fiction> {
-        val response = service.search(query, name, author, tags)
-        val fictionList = mutableListOf<Fiction>()
+    @kotlinx.coroutines.ExperimentalCoroutinesApi
+    override fun search(
+        query: String?,
+        name: String?,
+        author: String?,
+        tags: List<String>?
+    ): ReceiveChannel<Fiction> = produce {
+        val response = service.search(null, query, name, author, tags)
 
         if (response.isSuccessful) {
             val doc = Jsoup.parse(response.body()?.string())
-            val item = doc.select(SEARCH_ITEM_QUERY)
-            item.forEach { element ->
-                val fictionId = element.select(SEARCH_URL_QUERY).attr("href")
-                fictionList.add(getFiction(fictionId))
+            val lastPageHref = doc.select(SEARCH_LAST_PAGE_QUERY).attr("href")
+            val lastPage = getLastResultPage(lastPageHref)
+            for (resultPage in 1..lastPage) {
+                getSearchResults(resultPage, query, name, author, tags).consumeEach { send(it) }
             }
         } else throw Exception("Could not execute the search on RoyalRoad.")
-        return fictionList
     }
 
+    private fun getLastResultPage(lastPageHref: String?): Int {
+        return lastPageHref?.run {
+            val pageAttrRegex = """search\?page=(\d+)"""
+            val pageAttr = pageAttrRegex.toRegex().find(lastPageHref)?.value ?: ""
+            val numberRegex = """\d+""".toRegex()
+            numberRegex.find(pageAttr)?.value?.toInt() ?: 1
+        } ?: 1
+    }
+
+    @kotlinx.coroutines.ExperimentalCoroutinesApi
+    private fun getSearchResults(
+        page: Int,
+        query: String?,
+        name: String?,
+        author: String?,
+        tags: List<String>?
+    ): ReceiveChannel<Fiction> = produce {
+        with(service.search(page, query, name, author, tags)) {
+            if (isSuccessful) {
+                val doc = Jsoup.parse(body()?.string())
+                val item = doc.select(SEARCH_ITEM_QUERY)
+                item.forEach { element ->
+                    val fictionId = element.select(SEARCH_URL_QUERY).attr("href")
+                    send(getFiction(fictionId))
+                }
+            } else throw Exception("Could not execute the search on RoyalRoad.")
+
+        }
+    }
 }

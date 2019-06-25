@@ -14,11 +14,15 @@ internal interface RoyalRoadService {
     @GET("{fictionId}")
     suspend fun getFiction(@Path("fictionId") fictionId: String): Response<ResponseBody>
 
+    @GET("{searchResult}")
+    suspend fun getSearchResult(@Path("searchResult") searchResult: String): Response<ResponseBody>
+
     @GET("fictions/search?advanced=True")
     suspend fun getTags(): Response<ResponseBody>
 
     @GET("fictions/search")
     suspend fun search(
+        @Query("page") page: Int? = null,
         @Query("keyword") keyword: String? = null,
         @Query("name") title: String? = null,
         @Query("author") author: String? = null,
