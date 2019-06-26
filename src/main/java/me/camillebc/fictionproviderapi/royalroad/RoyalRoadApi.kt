@@ -54,9 +54,9 @@ internal object RoyalRoadApi : FictionProviderApi, CoroutineScope by CoroutineSc
     private val service: RoyalRoadService
 
     init {
-        val logging = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.HEADERS }
+//        val logging = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.HEADERS }
         val httpClient = OkHttpClient.Builder().apply {
-                        addInterceptor(logging)
+//            addInterceptor(logging)
             readTimeout(30, TimeUnit.SECONDS)
             followRedirects(true)
             followSslRedirects(true)
@@ -88,12 +88,10 @@ internal object RoyalRoadApi : FictionProviderApi, CoroutineScope by CoroutineSc
     }
 
     override suspend fun getFiction(fictionId: String): FictionMetadata {
-        println("ID: $fictionId")
         val response = service.getFiction(fictionId)
 
         if (response.isSuccessful) {
             val doc = Jsoup.parse(response.body()?.string())
-            println("ID2: $fictionId")
             val name = doc.select(FICTION_NAME_QUERY).text()
             val author = doc.select(FICTION_AUTHOR_QUERY).text()
             val authorUrl = doc.select(FICTION_AUTHOR_URL_QUERY).attr("href")
@@ -103,12 +101,6 @@ internal object RoyalRoadApi : FictionProviderApi, CoroutineScope by CoroutineSc
             val chapters = doc.select(CHAPTERS_QUERY).map {
                 it.attr("data-url")
             }
-            println("ID: $fictionId")
-            println("name: $name")
-            println("author: $name")
-            description.forEach {  println("Desc: $it")}
-            tags.forEach {  println("Tags: $it")}
-            chapters.forEach {  println("Chapters: $it")}
             return FictionMetadata(
                 name = name,
                 provider = baseUrl,
@@ -151,7 +143,6 @@ internal object RoyalRoadApi : FictionProviderApi, CoroutineScope by CoroutineSc
         if (response.isSuccessful) {
             val doc = Jsoup.parse(response.body()?.string())
             val lastPageHref = doc.select(SEARCH_LAST_PAGE_QUERY).attr("href")
-            println("Href: $lastPageHref")
             val lastPage = getLastResultPage(lastPageHref)
             for (resultPage in 1..lastPage) {
                 getSearchResults(resultPage, query, name, author, tags).consumeEach { send(it) }
@@ -182,7 +173,6 @@ internal object RoyalRoadApi : FictionProviderApi, CoroutineScope by CoroutineSc
                 val item = doc.select(SEARCH_ITEM_QUERY)
                 item.forEach { element ->
                     element.select(SEARCH_URL_QUERY).attr("href").let {
-                        println("SEARCH HREF: $it")
                         send(getFiction(it.toString()))
                     }
                 }
