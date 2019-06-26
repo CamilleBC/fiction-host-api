@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<module external.linked.project.id=":fictionhostapi" external.linked.project.path="$MODULE_DIR$" external.root.project.path="$MODULE_DIR$/.." external.system.id="GRADLE" type="JAVA_MODULE" version="4">
+<module external.linked.project.id=":fictionproviderapi" external.linked.project.path="$MODULE_DIR$" external.root.project.path="$MODULE_DIR$/.." external.system.id="GRADLE" type="JAVA_MODULE" version="4">
   <component name="FacetManager">
     <facet type="android-gradle" name="Android-Gradle">
       <configuration>
-        <option name="GRADLE_PROJECT_PATH" value=":fictionhostapi" />
+        <option name="GRADLE_PROJECT_PATH" value=":fictionproviderapi" />
       </configuration>
     </facet>
     <facet type="java-gradle" name="Java-Gradle">
@@ -20,7 +20,7 @@
           <option name="classpath" value="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk8/1.3.31/21edc5a6b2e39bc4dc2860346fd778e27503d6cb/kotlin-stdlib-jdk8-1.3.31.jar:/home/camille/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-coroutines-core/1.3.0-M1/a89c1a47eb68d6795e2737d84ba1bd81e146ac03/kotlinx-coroutines-core-1.3.0-M1.jar:/home/camille/.gradle/caches/modules-2/files-2.1/org.jsoup/jsoup/1.12.1/55819a28fc834c2f2bcf4dcdb278524dc3cf088f/jsoup-1.12.1.jar:/home/camille/.gradle/caches/modules-2/files-2.1/com.squareup.okhttp3/logging-interceptor/3.14.2/4c0c8881ac14b6b5519a30465c2de24b5f263138/logging-interceptor-3.14.2.jar:/home/camille/.gradle/caches/modules-2/files-2.1/com.squareup.retrofit2/retrofit/2.6.0/88ec07b1081599f7e8401650c782ce3f3c0aae07/retrofit-2.6.0.jar:/home/camille/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk7/1.3.31/e652770b6416c6d85934086899ffed3eccd35813/kotlin-stdlib-jdk7-1.3.31.jar:/home/camille/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/1.3.31/11289d20fd95ae219333f3456072be9f081c30cc/kotlin-stdlib-1.3.31.jar:/home/camille/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-common/1.3.31/20c34a04ea25cb1ef0139598bd67c764562cb170/kotlin-stdlib-common-1.3.31.jar:/home/camille/.gradle/caches/modules-2/files-2.1/com.squareup.okhttp3/okhttp/3.14.2/eaed79ed6bc1e14fad462172b6a09524545b165c/okhttp-3.14.2.jar:/home/camille/.gradle/caches/modules-2/files-2.1/org.jetbrains/annotations/13.0/919f0dfe192fb4e063e7dacadee7f8bb9a2672a9/annotations-13.0.jar:/home/camille/.gradle/caches/modules-2/files-2.1/com.squareup.okio/okio/1.17.2/78c7820b205002da4d2d137f6f312bd64b3d6049/okio-1.17.2.jar" />
           <option name="noStdlib" value="true" />
           <option name="noReflect" value="true" />
-          <option name="moduleName" value="fictionhostapi" />
+          <option name="moduleName" value="fictionproviderapi" />
           <option name="jvmTarget" value="1.8" />
           <option name="languageVersion" value="1.3" />
           <option name="apiVersion" value="1.3" />

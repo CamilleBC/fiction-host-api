@@ -1,21 +1,22 @@
-package me.camillebc.fictionhostapi.royalroad
+package me.camillebc.fictionproviderapi.royalroad
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.channels.produce
-import me.camillebc.fictionhostapi.Chapter
-import me.camillebc.fictionhostapi.Fiction
-import me.camillebc.fictionhostapi.FictionHostApi
+import kotlinx.coroutines.coroutineScope
+import me.camillebc.fictionproviderapi.Chapter
+import me.camillebc.fictionproviderapi.FictionMetadata
+import me.camillebc.fictionproviderapi.FictionProviderApi
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import org.jsoup.Jsoup
 import retrofit2.Retrofit
 import java.util.concurrent.TimeUnit
 
 
-private const val BASE_URL = "https://www.royalroad.com/"
-private const val HOST = "royalroad"
 // JSOUP CSS QUERIES
 // CHAPTER QUERIES
 private const val CHAPTERS_QUERY = "tr[style=cursor: pointer]"
@@ -47,83 +48,83 @@ private const val FICTION_TAGS_QUERY = "span.tags > span.label"                 
 // TAG QUERIES
 private const val TAG_ATTRIBUTE = "data-tag"
 
-object RoyalRoadApi : FictionHostApi, CoroutineScope by CoroutineScope(Dispatchers.IO) {
+internal object RoyalRoadApi : FictionProviderApi, CoroutineScope by CoroutineScope(Dispatchers.IO) {
+    override val baseUrl = "https://www.royalroad.com/"
+
     private val service: RoyalRoadService
 
     init {
-//        val logging = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
+        val logging = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.HEADERS }
         val httpClient = OkHttpClient.Builder().apply {
-            //            addInterceptor(logging)
+                        addInterceptor(logging)
             readTimeout(30, TimeUnit.SECONDS)
             followRedirects(true)
             followSslRedirects(true)
         }
         val retrofit = Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(baseUrl)
             .client(httpClient.build())
             .build()
 
         service = retrofit.create(RoyalRoadService::class.java)
     }
 
-    override suspend fun getAllChapters(fiction: Fiction) {
-        fiction.chapters.forEach { getChapter(it) }
-    }
-
-    override suspend fun getChapter(chapter: Chapter) {
-        val response = service.getChapter(chapter.id)
-        if (response.isSuccessful) {
+    override suspend fun getChapter(chapterId: String): Chapter {
+        val response = service.getChapter(chapterId)
+        return if (response.isSuccessful) {
             val doc = Jsoup.parse(response.body()?.string())
-            chapter.title = doc.select(CHAPTER_TITLE_QUERY).text()
-            chapter.content = doc.select(CHAPTER_CONTENT_QUERY).html().lines()
-        } else throw Exception("Could not get chapter: ${chapter.id}")
+            Chapter(
+                doc.select(CHAPTER_TITLE_QUERY).text(),
+                doc.select(CHAPTER_CONTENT_QUERY).html().lines()
+            )
+        } else Chapter()
     }
 
-    override suspend fun getChapterRange(
-        fiction: Fiction,
-        start: Int,
-        end: Int
-    ) {
-        fiction.chapters.subList(start, end).forEach { getChapter(it) }
+    override suspend fun getChapters(chapterIds: List<String>): List<Chapter> {
+        val deferredList = coroutineScope {
+            chapterIds.map { async { getChapter(it) } }
+        }
+        return deferredList.map { it.await() }
     }
 
-    override suspend fun getFiction(fictionId: String): Fiction {
+    override suspend fun getFiction(fictionId: String): FictionMetadata {
+        println("ID: $fictionId")
         val response = service.getFiction(fictionId)
-        lateinit var fiction: Fiction
 
         if (response.isSuccessful) {
             val doc = Jsoup.parse(response.body()?.string())
+            println("ID2: $fictionId")
             val name = doc.select(FICTION_NAME_QUERY).text()
             val author = doc.select(FICTION_AUTHOR_QUERY).text()
             val authorUrl = doc.select(FICTION_AUTHOR_URL_QUERY).attr("href")
-            val description = StringBuilder().also {
-                doc.select(FICTION_DESCRIPTION_QUERY).forEach { p ->
-                    it.appendln(p.text())
-                }
-            }.toString()
+            val description = doc.select(FICTION_DESCRIPTION_QUERY).html().lines()
             val imageUrl = doc.select(COVER_IMAGE_QUERY).first().absUrl("src")
-            val tags = mutableListOf<String>().apply {
-                doc.select(FICTION_TAGS_QUERY).forEach { add(it.text()) }
+            val tags = doc.select(FICTION_TAGS_QUERY).map { it.text() }
+            val chapters = doc.select(CHAPTERS_QUERY).map {
+                it.attr("data-url")
             }
-            val chapters = mutableListOf<Chapter>().apply {
-                doc.select(CHAPTERS_QUERY).forEach { chapterUrl ->
-                    add(Chapter(chapterUrl.attr("data-url")))
-                }
-            }
-            fiction = Fiction(
+            println("ID: $fictionId")
+            println("name: $name")
+            println("author: $name")
+            description.forEach {  println("Desc: $it")}
+            tags.forEach {  println("Tags: $it")}
+            chapters.forEach {  println("Chapters: $it")}
+            return FictionMetadata(
                 name = name,
-                hostUrl = BASE_URL,
+                provider = baseUrl,
                 fictionId = fictionId,
                 author = author,
-                authorUrl = authorUrl,
+                authorId = authorUrl,
                 description = description,
                 imageUrl = imageUrl,
                 tags = tags,
                 chapters = chapters
             )
         } else throw Exception("Could not get fiction: $fictionId")
-        return fiction
     }
+
+    override suspend fun getFictionChapters(fictionMetadata: FictionMetadata, start: Int, end: Int): List<Chapter> =
+        getChapters(fictionMetadata.chapters.subList(start, end))
 
     override suspend fun getTags(): List<String> {
         val response = service.getTags()
@@ -144,12 +145,13 @@ object RoyalRoadApi : FictionHostApi, CoroutineScope by CoroutineScope(Dispatche
         name: String?,
         author: String?,
         tags: List<String>?
-    ): ReceiveChannel<Fiction> = produce {
+    ): ReceiveChannel<FictionMetadata> = produce {
         val response = service.search(null, query, name, author, tags)
 
         if (response.isSuccessful) {
             val doc = Jsoup.parse(response.body()?.string())
             val lastPageHref = doc.select(SEARCH_LAST_PAGE_QUERY).attr("href")
+            println("Href: $lastPageHref")
             val lastPage = getLastResultPage(lastPageHref)
             for (resultPage in 1..lastPage) {
                 getSearchResults(resultPage, query, name, author, tags).consumeEach { send(it) }
@@ -173,14 +175,16 @@ object RoyalRoadApi : FictionHostApi, CoroutineScope by CoroutineScope(Dispatche
         name: String?,
         author: String?,
         tags: List<String>?
-    ): ReceiveChannel<Fiction> = produce {
+    ): ReceiveChannel<FictionMetadata> = produce {
         with(service.search(page, query, name, author, tags)) {
             if (isSuccessful) {
                 val doc = Jsoup.parse(body()?.string())
                 val item = doc.select(SEARCH_ITEM_QUERY)
                 item.forEach { element ->
-                    val fictionId = element.select(SEARCH_URL_QUERY).attr("href")
-                    send(getFiction(fictionId))
+                    element.select(SEARCH_URL_QUERY).attr("href").let {
+                        println("SEARCH HREF: $it")
+                        send(getFiction(it.toString()))
+                    }
                 }
             } else throw Exception("Could not execute the search on RoyalRoad.")
 
