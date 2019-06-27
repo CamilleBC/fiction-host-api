@@ -11,7 +11,6 @@ import me.camillebc.fictionproviderapi.Chapter
 import me.camillebc.fictionproviderapi.FictionMetadata
 import me.camillebc.fictionproviderapi.FictionProviderApi
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import org.jsoup.Jsoup
 import retrofit2.Retrofit
 import java.util.concurrent.TimeUnit
@@ -87,7 +86,7 @@ internal object RoyalRoadApi : FictionProviderApi, CoroutineScope by CoroutineSc
         return deferredList.map { it.await() }
     }
 
-    override suspend fun getFiction(fictionId: String): FictionMetadata {
+    override suspend fun getFictionMetadata(fictionId: String): FictionMetadata {
         val response = service.getFiction(fictionId)
 
         if (response.isSuccessful) {
@@ -118,7 +117,7 @@ internal object RoyalRoadApi : FictionProviderApi, CoroutineScope by CoroutineSc
     override suspend fun getFictionChapters(fictionMetadata: FictionMetadata, start: Int, end: Int): List<Chapter> =
         getChapters(fictionMetadata.chapters.subList(start, end))
 
-    override suspend fun getTags(): List<String> {
+    override suspend fun getProviderTags(): List<String> {
         val response = service.getTags()
         val tagList = mutableListOf<String>()
         if (response.isSuccessful) {
@@ -173,7 +172,7 @@ internal object RoyalRoadApi : FictionProviderApi, CoroutineScope by CoroutineSc
                 val item = doc.select(SEARCH_ITEM_QUERY)
                 item.forEach { element ->
                     element.select(SEARCH_URL_QUERY).attr("href").let {
-                        send(getFiction(it.toString()))
+                        send(getFictionMetadata(it.toString()))
                     }
                 }
             } else throw Exception("Could not execute the search on RoyalRoad.")
