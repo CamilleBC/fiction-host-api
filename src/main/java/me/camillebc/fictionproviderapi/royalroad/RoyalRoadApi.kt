@@ -13,6 +13,8 @@ import me.camillebc.fictionproviderapi.FictionProviderApi
 import okhttp3.OkHttpClient
 import org.jsoup.Jsoup
 import retrofit2.Retrofit
+import java.text.NumberFormat
+import java.util.*
 import java.util.concurrent.TimeUnit
 
 
@@ -44,6 +46,9 @@ private const val FICTION_AUTHOR_URL_QUERY = "$FICTION_AUTHOR_QUERY > a"
 private const val FICTION_DESCRIPTION_QUERY = "div[property=\"description\"]"
 private const val FICTION_NAME_QUERY = "h1[property=\"name\"]"
 private const val FICTION_TAGS_QUERY = "span.tags > span.label"                      // parent element
+private const val FICTION_STATS_QUERY = "div.stats-content > div > ul"                      // parent element
+private const val FICTION_STATS_PAGES_QUERY = "$FICTION_STATS_QUERY > li[property=numberOfPages]"// parent element
+
 // TAG QUERIES
 private const val TAG_ATTRIBUTE = "data-tag"
 
@@ -97,6 +102,10 @@ internal object RoyalRoadApi : FictionProviderApi, CoroutineScope by CoroutineSc
             val description = doc.select(FICTION_DESCRIPTION_QUERY).html().lines()
             val imageUrl = doc.select(COVER_IMAGE_QUERY).first().absUrl("src")
             val tags = doc.select(FICTION_TAGS_QUERY).map { it.text() }
+            val pages = doc.select(FICTION_STATS_PAGES_QUERY).text()
+            val pageCount = NumberFormat.getInstance(Locale.US).parse(pages).toLong()
+
+            println("Count: $pageCount")
             val chapters = doc.select(CHAPTERS_QUERY).map {
                 it.attr("data-url")
             }
@@ -109,6 +118,7 @@ internal object RoyalRoadApi : FictionProviderApi, CoroutineScope by CoroutineSc
                 description = description,
                 imageUrl = imageUrl,
                 tags = tags,
+                pageCount = pageCount,
                 chapters = chapters
             )
         } else throw Exception("Could not get fiction: $fictionId")
